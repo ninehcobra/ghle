@@ -31,3 +31,38 @@
     background-position: 100% 50%;
   }
 }
+
+a {
+  text-decoration: none !important;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.pagination a {
+  padding: 0.5rem;
+  margin: 0.2rem;
+  cursor: pointer;
+  border: 1px solid #dee2e6;
+  color: #007bff;
+  border-radius: 5px;
+}
+
+.pagination a:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.pagination .active a {
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+}
+
+.pagination a:disabled {
+  color: #6c757d;
+  cursor: not-allowed;
+}
