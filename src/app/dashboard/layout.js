@@ -31,7 +31,7 @@ export default function RootLayout({ children }) {
             <div className="dashboard-page">
                 <nav className="navbar navbar-expand-lg navbar-light bg-light">
                     <div className="container">
-                        <Link href="/">
+                        <Link href="/dashboard">
                             <div className="navbar-brand">GHLE</div>
                         </Link>
                         <button
@@ -55,8 +55,8 @@ export default function RootLayout({ children }) {
                                             </Link>
                                         </li>
                                         <li className="nav-item">
-                                            <Link href="/dashboard/shipper">
-                                                <div className="nav-link">Quản lý Shipper</div>
+                                            <Link href="/dashboard/warehouse">
+                                                <div className="nav-link">Kho hàng</div>
                                             </Link>
                                         </li>
                                     </>
@@ -65,16 +65,20 @@ export default function RootLayout({ children }) {
 
                                 {
                                     roleId === 1 || roleId === 4 ?
-                                        <li className="nav-item">
-                                            <Link href="/dashboard/settings">
-                                                <div className="nav-link">Quản lý kho hàng</div>
-                                            </Link>
-                                        </li> : ''
+                                        <>
+
+                                            <li className="nav-item">
+                                                <Link href="/dashboard/mywarehouse">
+                                                    <div className="nav-link">Quản lý Kho hàng</div>
+                                                </Link>
+                                            </li>
+                                        </>
+                                        : ''
                                 }
                                 {
                                     roleId === 1 || roleId === 3 ?
                                         <li className="nav-item">
-                                            <Link href="/dashboard/settings">
+                                            <Link href="/dashboard/order">
                                                 <div className="nav-link">Quản lý đơn hàng</div>
                                             </Link>
                                         </li> : ''

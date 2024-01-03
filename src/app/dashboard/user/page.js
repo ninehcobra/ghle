@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import UserList from './_components/UserList';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { getAllUser, registerNewUser } from '@/app/services/userService';
+import { deleteUser, getAllUser, registerNewUser } from '@/app/services/userService';
 import ReactPaginate from 'react-paginate';
 import { toast } from 'react-toastify';
 import { getAllProvince, getDistrictById } from '@/app/services/addressService';
@@ -41,10 +41,13 @@ const UserDashboard = () => {
         console.log(`Edit user with ID: ${userId}`);
     };
 
-    const handleDelete = (userId) => {
-        // Logic for deleting user
-        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
-        console.log(`Delete user with ID: ${userId}`);
+    const handleDelete = async (userId) => {
+
+        let res = await deleteUser(userId)
+        if (res && res.EC === 0) {
+            toast('Xóa thành công')
+            await fetchUsers()
+        }
     };
 
     const handleAddUser = () => {
@@ -156,22 +159,29 @@ const UserDashboard = () => {
     return (
         <div className="container mt-5">
             <h1>Quản lý tài khoản</h1>
-            <div style={{ width: '190px' }} className="mb-3">
-                <label htmlFor="roleFilter" className="form-label">
-                    Lọc theo loại tài khoản:
-                </label>
-                <select
-                    className="form-select"
-                    id="roleFilter"
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                >
-                    <option value="all">Tất cả</option>
-                    <option value="2">Khách hàng</option>
-                    <option value="3">Shipper</option>
-                    <option value="4">Quản lý kho hàng</option>
-                    {/* Thêm các loại tài khoản khác nếu cần */}
-                </select>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ width: '190px' }} className="mb-3">
+                    <label htmlFor="roleFilter" className="form-label">
+                        Lọc theo loại tài khoản:
+                    </label>
+                    <select
+                        className="form-select"
+                        id="roleFilter"
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                    >
+                        <option value="all">Tất cả</option>
+                        <option value="2">Khách hàng</option>
+                        <option value="3">Shipper</option>
+                        <option value="4">Quản lý kho hàng</option>
+                        {/* Thêm các loại tài khoản khác nếu cần */}
+                    </select>
+                </div>
+                <div className="mt-3">
+                    <button className="btn btn-primary" onClick={handleAddUser}>
+                        Thêm người dùng
+                    </button>
+                </div>
             </div>
             <UserList users={users} onEdit={handleEdit} onDelete={handleDelete} />
 
@@ -186,11 +196,7 @@ const UserDashboard = () => {
                 />
             </div>
 
-            <div className="mt-3">
-                <button className="btn btn-primary" onClick={handleAddUser}>
-                    Thêm người dùng
-                </button>
-            </div>
+
 
             <Modal show={showForm} onHide={handleCloseForm}>
                 <Modal.Header closeButton>
@@ -202,7 +208,7 @@ const UserDashboard = () => {
                         <Form.Group controlId="formEmail">
                             <Form.Label>Email:</Form.Label>
                             <Form.Control
-                                type="email"
+                                type="text"
                                 placeholder="Nhập email"
                                 name="email"
                                 value={newUser.email}

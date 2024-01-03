@@ -70,10 +70,25 @@ const getAllUser = async (page, limit, groupId) => {
 
 }
 
+const deleteUser = async (id) => {
+    try {
+        let res = await axios.post(`/api/delete-user`, { id: id })
+        return res
+    }
+    catch (error) {
+        return {
+            EC: -5,
+            EM: 'Can not connect to server'
+        }
+    }
+
+}
+
 export {
     registerNewUser,
     login,
     getUserAccount,
     logout,
-    getAllUser
+    getAllUser,
+    deleteUser
 }

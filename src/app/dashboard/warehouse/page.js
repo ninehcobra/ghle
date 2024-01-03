@@ -2,35 +2,36 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import UserList from './_components/UserList';
+import WarehouseList from './_components/WarehouseList';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { getAllUser, registerNewUser } from '@/app/services/userService';
 import ReactPaginate from 'react-paginate';
 import { toast } from 'react-toastify';
 import { getAllProvince, getDistrictById } from '@/app/services/addressService';
+import { createWarehouse, deleteWarehouse, getAllWWarehouse, getUnassignedWarehouseManagers } from '@/app/services/warehouseService';
 
 const ITEMS_PER_PAGE = 5;
 
-const ShipperDashboard = () => {
-    const [users, setUsers] = useState([
-
-    ]);
+const WarehouseDashboard = () => {
+    const [warehouses, setWarehouses] = useState([]);
     const [arrProvince, setArrProvince] = useState([])
     const [arrDistrict, setArrDistrict] = useState([])
     const [selectedRole, setSelectedRole] = useState('all')
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPage, setTotalPage] = useState(0)
     const [showForm, setShowForm] = useState(false);
-    const [newUser, setNewUser] = useState({
-        email: '',
-        password: '',
+    const [newWarehouse, setNewWarehouse] = useState({
         name: '',
         address: '',
         phoneNumber: '',
         provinceId: '',
         districtId: '',
-        roleId: ''
+        managerId: ''
     });
+
+    const [provinceId, setProvinceId] = useState('')
+    const [name, setName] = useState('')
+    const [arrManager, setArrManager] = useState([])
 
     const handlePageChange = ({ selected }) => {
         setCurrentPage(selected);
@@ -41,13 +42,16 @@ const ShipperDashboard = () => {
         console.log(`Edit user with ID: ${userId}`);
     };
 
-    const handleDelete = (userId) => {
+    const handleDelete = async (id) => {
         // Logic for deleting user
-        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
-        console.log(`Delete user with ID: ${userId}`);
+        let res = await deleteWarehouse({ id: id })
+        if (res && res.EC === 0) {
+            toast('Xóa thành công')
+            await fetchWarehouse()
+        }
     };
 
-    const handleAddUser = () => {
+    const handleAddWarehouse = () => {
         setShowForm(true);
     };
 
@@ -57,38 +61,29 @@ const ShipperDashboard = () => {
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
-        setNewUser((prevUser) => ({
-            ...prevUser,
+        setNewWarehouse((prevWarehouse) => ({
+            ...prevWarehouse,
             [name]: value,
         }));
     };
 
     const handleFormSubmit = async () => {
-        console.log(newUser)
 
-        if (isUserValid(newUser)) {
-            let res = await registerNewUser({
-                email: newUser.email,
-                password: newUser.password,
-                address: newUser.address,
-                phoneNumber: newUser.phoneNumber,
-                districtId: newUser.districtId,
-                name: newUser.name,
-                roleId: newUser.roleId
-            })
+        if (isWarehouseValid(newWarehouse)) {
+            let res = await createWarehouse(newWarehouse)
             if (res && res.EC === 0) {
-                setNewUser({
-                    email: '',
-                    password: '',
+                setNewWarehouse({
                     name: '',
                     address: '',
                     phoneNumber: '',
-                    province: '',
-                    district: '',
+                    provinceId: '',
+                    districtId: '',
+                    managerId: ''
                 });
                 setShowForm(false)
                 toast('Tạo tài khoản thành công')
-                await fetchUsers()
+                await fetchWarehouse()
+                await fetchUnassignedWarehouseManagers()
             }
             else if (res.EC === 1) {
                 toast.error('Email này đã tồn tại')
@@ -102,19 +97,27 @@ const ShipperDashboard = () => {
         }
     };
 
-    const fetchUsers = async () => {
-        let res = await getAllUser(currentPage + 1, ITEMS_PER_PAGE, selectedRole)
+    const fetchWarehouse = async () => {
+        let res = await getAllWWarehouse(currentPage + 1, ITEMS_PER_PAGE, provinceId, name)
 
         if (res && res.EC === 0) {
             setTotalPage(res.DT.totalPages)
-            setUsers(res.DT.users)
+            setWarehouses(res.DT.warehouses)
+        }
+    }
+
+    const fetchUnassignedWarehouseManagers = async () => {
+        let res = await getUnassignedWarehouseManagers()
+        if (res && res.EC === 0) {
+            setArrManager(res.DT)
         }
     }
 
     useEffect(() => {
-        fetchUsers()
+        fetchWarehouse()
         fetchProvince()
-    }, [currentPage, selectedRole])
+        fetchUnassignedWarehouseManagers()
+    }, [currentPage, provinceId])
 
     const fetchProvince = async () => {
         let res = await getAllProvince()
@@ -127,16 +130,16 @@ const ShipperDashboard = () => {
         let res = await getDistrictById(id)
         if (res && res.EC === 0) {
             setArrDistrict(res.DT)
-            setNewUser((prevUser) => ({
+            setNewWarehouse((prevUser) => ({
                 ...prevUser,
                 ['districtId']: '',
             }));
         }
     }
 
-    const isUserValid = (user) => {
+    const isWarehouseValid = (user) => {
         // Kiểm tra từng trường và đảm bảo không trống
-        if (!user.email || !user.password || !user.name || !user.address || !user.phoneNumber || !user.provinceId || !user.districtId || !user.roleId) {
+        if (!user.name || !user.address || !user.phoneNumber || !user.provinceId || !user.districtId || !user.managerId) {
             return false;
         }
 
@@ -147,33 +150,47 @@ const ShipperDashboard = () => {
         if (type === 'provinceId') {
             await fetchDistrict(value)
         }
-        setNewUser((prevUser) => ({
-            ...prevUser,
+        setNewWarehouse((prevWarehouse) => ({
+            ...prevWarehouse,
             [type]: value,
         }));
     }
 
+
     return (
         <div className="container mt-5">
-            <h1>Quản lý tài khoản</h1>
-            <div style={{ width: '190px' }} className="mb-3">
-                <label htmlFor="roleFilter" className="form-label">
-                    Lọc theo loại tài khoản:
-                </label>
-                <select
-                    className="form-select"
-                    id="roleFilter"
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                >
-                    <option value="all">Tất cả</option>
-                    <option value="2">Khách hàng</option>
-                    <option value="3">Shipper</option>
-                    <option value="4">Quản lý kho hàng</option>
-                    {/* Thêm các loại tài khoản khác nếu cần */}
-                </select>
+            <h1>Kho hàng</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: '190px' }} className="mb-3">
+                    <label htmlFor="roleFilter" className="form-label">
+                        Lọc theo tỉnh thành:
+                    </label>
+                    <select
+                        className="form-select"
+                        id="roleFilter"
+                        value={provinceId}
+                        onChange={(e) => setProvinceId(e.target.value)}
+                    >
+                        <option value="">Tất cả</option>
+                        {arrProvince ?
+                            arrProvince.map((item) => {
+                                return (
+                                    <option value={item.id} key={item.id}>{item.name}</option>
+                                )
+                            })
+                            : ''
+                        }
+
+
+                    </select>
+                </div>
+                <div className="mt-3">
+                    <button className="btn btn-primary" onClick={handleAddWarehouse}>
+                        Thêm kho
+                    </button>
+                </div>
             </div>
-            <UserList users={users} onEdit={handleEdit} onDelete={handleDelete} />
+            <WarehouseList warehouses={warehouses} onEdit={handleEdit} onDelete={handleDelete} />
 
             <div className="mt-3">
                 <ReactPaginate
@@ -186,35 +203,22 @@ const ShipperDashboard = () => {
                 />
             </div>
 
-            <div className="mt-3">
-                <button className="btn btn-primary" onClick={handleAddUser}>
-                    Thêm người dùng
-                </button>
-            </div>
+
 
             <Modal show={showForm} onHide={handleCloseForm}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Tạo người dùng mới</Modal.Title>
+                    <Modal.Title>Tạo kho mới</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     <div >
                         {/* Add form fields for new user */}
                         <Form.Group controlId="formEmail">
-                            <Form.Label>Email:</Form.Label>
+                            <Form.Label>Tên Kho:</Form.Label>
                             <Form.Control
-                                type="email"
-                                placeholder="Nhập email"
-                                name="email"
-                                value={newUser.email}
-                                onChange={handleFormChange}
-                                required
-                            />
-                            <Form.Label>Mật khẩu:</Form.Label>
-                            <Form.Control
-                                type="password"
-                                placeholder="Nhập mật khẩu"
-                                name="password"
-                                value={newUser.password}
+                                type="text"
+                                placeholder="Nhập tên kho"
+                                name="name"
+                                value={newWarehouse.name}
                                 onChange={handleFormChange}
                                 required
                             />
@@ -223,32 +227,23 @@ const ShipperDashboard = () => {
                                 type="text"
                                 placeholder="Nhập địa chỉ"
                                 name="address"
-                                value={newUser.address}
-                                onChange={handleFormChange}
-                                required
-                            />
-                            <Form.Label>Tên:</Form.Label>
-                            <Form.Control
-                                type="text"
-                                placeholder="Nhập họ và tên"
-                                name="name"
-                                value={newUser.name}
+                                value={newWarehouse.address}
                                 onChange={handleFormChange}
                                 required
                             />
                             <Form.Label>Số điện thoại:</Form.Label>
                             <Form.Control
                                 type="text"
-                                placeholder="nhập Số điện thoại"
+                                placeholder="Nhập số điện thoại"
                                 name="phoneNumber"
-                                value={newUser.phoneNumber}
+                                value={newWarehouse.phoneNumber}
                                 onChange={handleFormChange}
                                 required
                             />
                             <div>
                                 <div>
                                     <Form.Label style={{ marginTop: '8px' }}>Tỉnh / Thành phố :</Form.Label>
-                                    <select value={newUser.provinceId} onChange={(e) => onChangePicker(e.target.value, 'provinceId')} style={{ marginLeft: '8px' }} >
+                                    <select value={newWarehouse.provinceId} onChange={(e) => onChangePicker(e.target.value, 'provinceId')} style={{ marginLeft: '8px' }} >
                                         <option key={0} value={''}>Chọn Tỉnh / Thành phố</option>
                                         {arrProvince ?
                                             arrProvince.map((province) => {
@@ -261,7 +256,7 @@ const ShipperDashboard = () => {
                                 </div>
                                 <div>
                                     <Form.Label style={{ marginTop: '8px' }}>Quận / Huyện :</Form.Label>
-                                    <select value={newUser.districtId} onChange={(e) => onChangePicker(e.target.value, 'districtId')} style={{ marginLeft: '8px' }} >
+                                    <select value={newWarehouse.districtId} onChange={(e) => onChangePicker(e.target.value, 'districtId')} style={{ marginLeft: '8px' }} >
                                         <option key={0} value={''}>Chọn Quận / Huyện</option>
                                         {arrDistrict ?
                                             arrDistrict.map((district) => {
@@ -273,14 +268,20 @@ const ShipperDashboard = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <Form.Label style={{ marginTop: '8px' }}>Quyền :</Form.Label>
-                                    <select value={newUser.roleId} onChange={(e) => onChangePicker(e.target.value, 'roleId')} style={{ marginLeft: '8px' }} >
-                                        <option key={0} value={''}>Chọn quyền</option>
-                                        <option key={0} value={1}>Admin</option>
-                                        <option key={0} value={2}>Khách hàng</option>
-                                        <option key={0} value={3}>Shipper</option>
-                                        <option key={0} value={4}>Quản lý kho</option>
-
+                                    <Form.Label style={{ marginTop: '8px' }}>Người quản lý :</Form.Label>
+                                    <select value={newWarehouse.managerId} onChange={(e) => onChangePicker(e.target.value, 'managerId')} style={{ marginLeft: '8px' }} >
+                                        <option key={0} value={''}>Chọn nhân viên</option>
+                                        {arrManager
+                                            ?
+                                            arrManager.map((item) => {
+                                                return (
+                                                    <option key={item.id} value={item.id}>{item.name}</option>
+                                                )
+                                            }
+                                            )
+                                            :
+                                            ''
+                                        }
                                     </select>
                                 </div>
                             </div>
@@ -288,7 +289,7 @@ const ShipperDashboard = () => {
                         </Form.Group>
                         {/* Repeat similar fields for other user properties */}
                         <Button onClick={handleFormSubmit} style={{ marginTop: '12px' }} variant="primary" type="submit">
-                            Save
+                            Lưu
                         </Button>
                     </div>
                 </Modal.Body>
@@ -298,4 +299,4 @@ const ShipperDashboard = () => {
     );
 };
 
-export default ShipperDashboard;
+export default WarehouseDashboard;
